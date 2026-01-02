@@ -42,7 +42,7 @@ dependencies:
   url_launcher: ^6.3.1 # Thêm package mở URL (cho trợ giúp)
   flutter_dotenv: ^5.1.0 # Quản lý environment variables
   http: ^1.1.0
-  google_generative_ai: ^0.4.0  # Gemini AI
+  google_generative_ai: ^0.2.2
   cached_network_image: ^3.3.0 # Cache hình ảnh
   intl: ^0.18.0  # Thêm dòng này
   map_launcher: ^4.4.2

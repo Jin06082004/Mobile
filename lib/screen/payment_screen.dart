@@ -51,7 +51,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           .collection('bookings')
           .doc(widget.booking.id)
           .update({
-            'status': BookingStatus.confirmed.name,
+            'status': BookingStatus.pending.name, // <-- ĐỔI THÀNH pending
             'paymentStatus': 'paid',
             'updatedAt': Timestamp.now(),
           });

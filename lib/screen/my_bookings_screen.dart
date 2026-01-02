@@ -465,7 +465,7 @@ class _StatusChip extends StatelessWidget {
     switch (status) {
       case BookingStatus.pending:
         color = Colors.orange;
-        label = 'Đang chờ';
+        label = 'Chờ nhận phòng';
         break;
       case BookingStatus.confirmed:
         color = Colors.blue;

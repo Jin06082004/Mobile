@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../database/Models/room_model.dart';
 import '../database/Models/review_model.dart';
 import 'room_detail_screen.dart';
 import 'my_bookings_screen.dart';
 import 'profie_screen.dart';
-import 'login_screen.dart';
+// import 'login_screen.dart';
 import 'hotel_search_screen.dart';
+import 'ai_chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -176,27 +177,52 @@ class _RoomListViewState extends State<RoomListView> {
                               ),
                             ],
                           ),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.logout_rounded,
-                                color: Colors.white,
+                          Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.chat_bubble_outline_rounded,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const AIChatScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
-                              onPressed: () async {
-                                await FirebaseAuth.instance.signOut();
-                                if (context.mounted) {
-                                  Navigator.of(context).pushReplacement(
-                                    MaterialPageRoute(
-                                      builder: (_) => const LoginScreen(),
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
+                              const SizedBox(width: 8),
+                              // Container(
+                              //   decoration: BoxDecoration(
+                              //     color: Colors.white.withOpacity(0.2),
+                              //     borderRadius: BorderRadius.circular(12),
+                              //   ),
+                              //   child: IconButton(
+                              //     icon: const Icon(
+                              //       Icons.logout_rounded,
+                              //       color: Colors.white,
+                              //     ),
+                              //     onPressed: () async {
+                              //       await FirebaseAuth.instance.signOut();
+                              //       if (context.mounted) {
+                              //         Navigator.of(context).pushReplacement(
+                              //           MaterialPageRoute(
+                              //             builder: (_) => const LoginScreen(),
+                              //           ),
+                              //         );
+                              //       }
+                              //     },
+                              //   ),
+                              // ),
+                            ],
                           ),
                         ],
                       ),
@@ -686,71 +712,79 @@ class RoomCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Giá phòng',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                            ).createShader(bounds),
-                            child: Text(
-                              '${room.formattedPrice}/đêm',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Giá phòng',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF667eea).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
+                            const SizedBox(height: 4),
+                            ShaderMask(
+                              shaderCallback: (bounds) => const LinearGradient(
+                                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                              ).createShader(bounds),
+                              child: Text(
+                                '${room.formattedPrice}/đêm',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => RoomDetailScreen(room: room),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF667eea).withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
                               ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            ],
                           ),
-                          child: const Text(
-                            'Xem chi tiết',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => RoomDetailScreen(room: room),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Chi tiết',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ),
