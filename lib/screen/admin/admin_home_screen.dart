@@ -9,6 +9,8 @@ import 'admin_statistics_screen.dart';
 import 'admin_rooms_screen.dart';
 import 'admin_bookings_screen.dart';
 import 'admin_users_screen.dart';
+import 'admin_voucher_screen.dart';
+import '../../database/seed_data.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -18,6 +20,21 @@ class AdminHomeScreen extends StatefulWidget {
 }
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
+  // Future<void> uploadVouchersToFirestore(BuildContext context) async {
+  //   try {
+  //     await SeedData().seedVouchers();
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('Đã đẩy dữ liệu voucher lên Firestore thành công!'),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(SnackBar(content: Text('Lỗi khi đẩy voucher: $e')));
+  //   }
+  // }
+
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
@@ -25,6 +42,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     AdminRoomsScreen(),
     AdminBookingsScreen(),
     AdminUsersScreen(),
+    AdminVoucherScreen(),
   ];
 
   Future<void> uploadHotelsToFirestore(BuildContext context) async {
@@ -108,9 +126,25 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           Expanded(child: _screens[_selectedIndex]),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton(
-              onPressed: () => uploadHotelsToFirestore(context),
-              child: const Text('Đẩy dữ liệu khách sạn lên Firestore'),
+            child: Row(
+              children: [
+                // Expanded(
+                //   child: ElevatedButton(
+                //     onPressed: () => uploadHotelsToFirestore(context),
+                //     child: const Text('Đẩy dữ liệu khách sạn lên Firestore'),
+                //   ),
+                // ),
+                const SizedBox(width: 12),
+                // Expanded(
+                //   child: ElevatedButton(
+                //     onPressed: () => uploadVouchersToFirestore(context),
+                //     style: ElevatedButton.styleFrom(
+                //       backgroundColor: Colors.orange,
+                //     ),
+                //     child: const Text('Đẩy dữ liệu voucher lên Firestore'),
+                //   ),
+                // ),
+              ],
             ),
           ),
         ],
@@ -129,6 +163,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             label: 'Đặt phòng',
           ),
           NavigationDestination(icon: Icon(Icons.people), label: 'Người dùng'),
+          NavigationDestination(
+            icon: Icon(Icons.card_giftcard),
+            label: 'Voucher',
+          ),
         ],
       ),
     );

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../database/Models/hotel_model.dart';
+import '../database/Models/aichatmessage_model.dart';
 import 'hotel_booking_screen.dart';
 
 class HotelAISearchScreen extends StatefulWidget {
@@ -272,6 +273,18 @@ class _HotelAISearchScreenState extends State<HotelAISearchScreen> {
     final message = _textController.text.trim();
     if (message.isEmpty) return;
 
+    // Lưu tin nhắn người dùng vào Firestore
+    final userChat = AIChatMessageModel(
+      id: '', // Firestore sẽ tự sinh id
+      userId: 'user_1', // TODO: lấy userId thực tế nếu có
+      message: message,
+      isUser: true,
+      createdAt: DateTime.now(),
+    );
+    await FirebaseFirestore.instance
+        .collection('ai_chat_messages')
+        .add(userChat.toFirestore());
+
     setState(() {
       _history.add(_ChatMessage(message: message, isUser: true));
       _textController.clear();
@@ -281,6 +294,19 @@ class _HotelAISearchScreenState extends State<HotelAISearchScreen> {
 
     try {
       final responseText = await _callOpenAIGPT(message);
+
+      // Lưu tin nhắn AI vào Firestore
+      final aiChat = AIChatMessageModel(
+        id: '',
+        userId: 'user_1', // TODO: lấy userId thực tế nếu có
+        message: responseText,
+        isUser: false,
+        createdAt: DateTime.now(),
+      );
+      await FirebaseFirestore.instance
+          .collection('ai_chat_messages')
+          .add(aiChat.toFirestore());
+
       setState(() {
         _history.add(_ChatMessage(message: responseText, isUser: false));
         _isAILoading = false;

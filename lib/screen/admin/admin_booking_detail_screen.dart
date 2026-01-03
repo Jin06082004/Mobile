@@ -231,6 +231,12 @@ class _AdminBookingDetailScreenState extends State<AdminBookingDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    String formatVND(num value) {
+      return value
+          .toStringAsFixed(0)
+          .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => ',');
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chi tiết đặt phòng'),
@@ -428,7 +434,9 @@ class _AdminBookingDetailScreenState extends State<AdminBookingDetailScreen> {
                             children: [
                               const Text('Tổng tiền:'),
                               Text(
-                                _currentBooking.formattedTotalPrice,
+                                _payment != null
+                                    ? formatVND(_payment!.amount)
+                                    : _currentBooking.formattedTotalPrice,
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,

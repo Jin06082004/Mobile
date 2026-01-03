@@ -5,6 +5,8 @@ import '../database/Models/booking_model.dart' hide PaymentStatus;
 import '../database/Models/room_model.dart';
 import '../database/Models/payment_model.dart';
 import '../database/Models/user_model.dart';
+import '../database/Models/voucher_model.dart';
+import '../database/Models/user_voucher_model.dart';
 import '../services/email_service.dart';
 import 'home_screen.dart';
 
@@ -19,8 +21,17 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
+  String formatVND(num value) {
+    return value
+        .toStringAsFixed(0)
+        .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => ',');
+  }
+
   PaymentMethod _selectedMethod = PaymentMethod.cash;
   bool _isProcessing = false;
+  TextEditingController _voucherController = TextEditingController();
+  VoucherModel? _appliedVoucher;
+  double _discountAmount = 0;
 
   Future<void> _processPayment() async {
     setState(() => _isProcessing = true);
@@ -31,12 +42,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
           .collection('payments')
           .doc();
 
+      // Tính toán giá cuối cùng
+      final double finalAmount = (widget.booking.totalPrice - _discountAmount)
+          .clamp(0, double.infinity);
+
       // Create payment record
       final payment = PaymentModel(
         id: paymentRef.id,
         bookingId: widget.booking.id,
         userId: userId,
-        amount: widget.booking.totalPrice,
+        amount: finalAmount,
         method: _selectedMethod,
         status: PaymentStatus.completed,
         transactionId: 'TXN${DateTime.now().millisecondsSinceEpoch}',
@@ -46,15 +61,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       await paymentRef.set(payment.toFirestore());
 
-      // Update booking status
-      await FirebaseFirestore.instance
-          .collection('bookings')
-          .doc(widget.booking.id)
-          .update({
-            'status': BookingStatus.pending.name, // <-- ĐỔI THÀNH pending
-            'paymentStatus': 'paid',
-            'updatedAt': Timestamp.now(),
-          });
+      // Nếu có voucher được áp dụng, lưu vào user_vouchers và giảm số lượng voucher
+      if (_appliedVoucher != null) {
+        final userVoucher = UserVoucherModel(
+          userId: userId,
+          voucherId: _appliedVoucher!.id,
+          bookingId: widget.booking.id,
+          usedAt: DateTime.now(),
+          id: '',
+        );
+        await FirebaseFirestore.instance
+            .collection('user_vouchers')
+            .add(userVoucher.toFirestore());
+
+        // Giảm số lượng voucher
+        final voucherRef = FirebaseFirestore.instance
+            .collection('vouchers')
+            .doc(_appliedVoucher!.id);
+        await voucherRef.update({'quantity': FieldValue.increment(-1)});
+      }
 
       // Lấy thông tin user để gửi email
       final userDoc = await FirebaseFirestore.instance
@@ -68,7 +93,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
           recipientEmail: user.email,
           fullName: user.fullName,
           roomName: widget.room.name,
-          totalPrice: BookingModel.formatPrice(widget.booking.totalPrice),
+          totalPrice: BookingModel.formatPrice(
+            finalAmount,
+          ), // Đúng số tiền đã thanh toán
           transactionId: payment.transactionId ?? 'N/A',
         ).catchError((e) {
           print('Lỗi gửi email: $e');
@@ -76,6 +103,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
 
       if (mounted) {
+        setState(() {}); // Cập nhật lại UI với giá mới
         await showDialog(
           context: context,
           barrierDismissible: false,
@@ -87,13 +115,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Text('Thành công!'),
               ],
             ),
-            content: const Column(
+            content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Thanh toán thành công!'),
-                SizedBox(height: 8),
+                const Text('Thanh toán thành công!'),
+                const SizedBox(height: 8),
                 Text(
+                  'Số tiền đã thanh toán: ${formatVND(finalAmount)} VNĐ',
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
                   'Đặt phòng của bạn đã được xác nhận.',
                   style: TextStyle(color: Colors.grey),
                 ),
@@ -259,46 +295,161 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${widget.room.formattedPrice} x ${widget.booking.nights} đêm',
-                        style: const TextStyle(
-                          color: Color(0xFF667eea),
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          '${widget.room.formattedPrice} x ${widget.booking.nights} đêm',
+                          style: const TextStyle(
+                            color: Color(0xFF667eea),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
-                      Text(
-                        widget.booking.formattedTotalPrice,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF764ba2),
+                      Flexible(
+                        child: Text(
+                          formatVND(widget.booking.totalPrice) + ' VNĐ',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF764ba2),
+                          ),
+                          textAlign: TextAlign.right,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ],
                   ),
+                  if (_discountAmount > 0)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Giảm giá voucher',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.green,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            '-${formatVND(_discountAmount)} VNĐ',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const Divider(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Tổng thanh toán',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF667eea),
+                      const Expanded(
+                        child: Text(
+                          'Số tiền phải thanh toán',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF667eea),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
-                      Text(
-                        widget.booking.formattedTotalPrice,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF764ba2),
+                      Flexible(
+                        child: Text(
+                          '${formatVND((widget.booking.totalPrice - _discountAmount).clamp(0, double.infinity))} VNĐ',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF764ba2),
+                          ),
+                          textAlign: TextAlign.right,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 28),
+            // Voucher Code Input
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Mã voucher',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _voucherController,
+                        decoration: const InputDecoration(
+                          hintText: 'Nhập mã voucher',
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final code = _voucherController.text.trim();
+                        final query = await FirebaseFirestore.instance
+                            .collection('vouchers')
+                            .where('code', isEqualTo: code)
+                            .where('endDate', isGreaterThan: DateTime.now())
+                            .limit(1)
+                            .get();
+                        if (query.docs.isNotEmpty) {
+                          final voucher = VoucherModel.fromFirestore(
+                            query.docs.first,
+                          );
+                          setState(() {
+                            _appliedVoucher = voucher;
+                            _discountAmount =
+                                (widget.booking.totalPrice *
+                                        voucher.discountPercent /
+                                        100)
+                                    .clamp(0, voucher.maxDiscount);
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Áp dụng thành công voucher!'),
+                            ),
+                          );
+                        } else {
+                          setState(() {
+                            _appliedVoucher = null;
+                            _discountAmount = 0;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Voucher không hợp lệ')),
+                          );
+                        }
+                      },
+                      child: const Text('Áp dụng'),
+                    ),
+                  ],
+                ),
+                if (_appliedVoucher != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Giảm giá: -${_discountAmount.toStringAsFixed(0)} VNĐ',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 28),
             // Payment Button

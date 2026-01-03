@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Models/room_model.dart';
+import 'Models/voucher_model.dart';
 
 class SeedData {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -184,6 +185,76 @@ class SeedData {
     }
   }
 
+  // Seed sample vouchers
+  Future<void> seedVouchers() async {
+    String formatVND(num value) {
+      return value
+          .toStringAsFixed(0)
+          .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => ',');
+    }
+
+    final vouchers = [
+      VoucherModel(
+        id: 'voucher1',
+        code: 'WELCOME10',
+        description: 'Giảm 10% cho đơn đầu tiên, tối đa ${formatVND(200000)}đ',
+        discountPercent: 10,
+        maxDiscount: 200000,
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(Duration(days: 60)),
+        quantity: 100,
+      ),
+      VoucherModel(
+        id: 'voucher2',
+        code: 'SUMMER20',
+        description: 'Ưu đãi hè: Giảm 20% tối đa ${formatVND(300000)}đ',
+        discountPercent: 20,
+        maxDiscount: 300000,
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(Duration(days: 90)),
+        quantity: 50,
+      ),
+      VoucherModel(
+        id: 'voucher3',
+        code: 'FAMILY15',
+        description:
+            'Giảm 15% cho phòng Family Suite, tối đa ${formatVND(250000)}đ',
+        discountPercent: 15,
+        maxDiscount: 250000,
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(Duration(days: 45)),
+        quantity: 30,
+      ),
+      VoucherModel(
+        id: 'voucher4',
+        code: 'DELUXE5',
+        description: 'Giảm 5% cho phòng Deluxe, tối đa ${formatVND(100000)}đ',
+        discountPercent: 5,
+        maxDiscount: 100000,
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(Duration(days: 30)),
+        quantity: 40,
+      ),
+      VoucherModel(
+        id: 'voucher5',
+        code: 'NEWYEAR50',
+        description: 'Mừng năm mới: Giảm 50% tối đa ${formatVND(500000)}đ',
+        discountPercent: 50,
+        maxDiscount: 500000,
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(Duration(days: 10)),
+        quantity: 10,
+      ),
+    ];
+
+    for (var voucher in vouchers) {
+      await _firestore
+          .collection('vouchers')
+          .doc(voucher.id)
+          .set(voucher.toFirestore());
+    }
+  }
+
   // Seed all data
   Future<void> seedAll() async {
     try {
@@ -192,6 +263,10 @@ class SeedData {
       print('📦 Đang thêm phòng...');
       await seedRooms();
       print('✅ Đã thêm ${6} phòng');
+
+      print('🎟️ Đang thêm voucher...');
+      await seedVouchers();
+      print('✅ Đã thêm ${5} voucher');
 
       print('🎉 Hoàn thành seed dữ liệu!');
     } catch (e) {
@@ -208,6 +283,12 @@ class SeedData {
       // Delete all rooms
       final roomsSnapshot = await _firestore.collection('rooms').get();
       for (var doc in roomsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete all vouchers
+      final vouchersSnapshot = await _firestore.collection('vouchers').get();
+      for (var doc in vouchersSnapshot.docs) {
         await doc.reference.delete();
       }
 
